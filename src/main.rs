@@ -2,20 +2,24 @@ use feedparser_rs::{Entry, parse};
 use platform_dirs::AppDirs;
 use reqwest::{self, Error as ReqwestError};
 use scraper::{Html, Selector};
-use std::fs::{read_to_string, write};
+use std::{
+    collections::HashMap,
+    fs::{read_to_string, write},
+};
 
 const FEED_URL: &str = "https://manuelmoreale.com/feed/peopleandblogs";
 
 fn main() {
     let feed_contents = get_feed_contents().unwrap();
     let feed = parse(feed_contents.as_bytes()).unwrap();
-    let documents = feed.entries.iter().filter_map(extract_document);
+    let documents: HashMap<String, Html> = feed
+        .entries
+        .iter()
+        .filter_map(extract_document)
+        .filter_map(|document| extract_blog_url(&document).map(|url| (url, document)))
+        .collect();
 
-    for document in documents {
-        if let Some(blog_url) = extract_blog_url(document) {
-            dbg!(blog_url);
-        };
-    }
+    dbg!(documents);
 }
 
 fn get_feed_cache_path() -> std::path::PathBuf {
@@ -41,7 +45,7 @@ fn extract_document(feed_entry: &Entry) -> Option<Html> {
         .and_then(|d| Some(Html::parse_fragment(&d.value)))
 }
 
-fn extract_blog_url(document: Html) -> Option<String> {
+fn extract_blog_url(document: &Html) -> Option<String> {
     let p_selector = Selector::parse("p").unwrap();
     let p = document.select(&p_selector).next()?;
     if !p.inner_html().contains("whose blog can be found at") {
