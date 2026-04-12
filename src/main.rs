@@ -1,6 +1,6 @@
 use feedparser_rs::{Entry, parse};
 use platform_dirs::AppDirs;
-use reqwest::{self, Error as ReqwestError};
+use reqwest::{self, Error as ReqwestError, Url};
 use scraper::{Html, Selector};
 use std::{
     collections::HashMap,
@@ -54,13 +54,9 @@ fn extract_blog_url(document: &Html) -> Option<String> {
     let a_selector = Selector::parse("a").unwrap();
     let a = p.select(&a_selector).next()?;
     let raw_url = a.value().attr("href")?;
-    Some(canonicalize(&raw_url))
+    extract_domain(raw_url)
 }
 
-fn canonicalize(url: &str) -> String {
-    let url = url.replace("www.", "");
-    let url = url.strip_prefix("http://").unwrap_or(&url);
-    let url = url.strip_prefix("https://").unwrap_or(&url);
-    let url = url.strip_suffix("/").unwrap_or(&url);
-    url.to_string()
+fn extract_domain(raw_url: &str) -> Option<String> {
+    Some(Url::parse(raw_url).ok()?.domain()?.to_string())
 }
