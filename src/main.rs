@@ -1,7 +1,7 @@
 use feedparser_rs::{Entry, parse};
-use html_parser::Dom;
 use platform_dirs::AppDirs;
 use reqwest::{self, Error as ReqwestError};
+use scraper::{Html, Selector};
 use std::fs::{read_to_string, write};
 
 const FEED_URL: &str = "https://manuelmoreale.com/feed/peopleandblogs";
@@ -9,22 +9,12 @@ const FEED_URL: &str = "https://manuelmoreale.com/feed/peopleandblogs";
 fn main() {
     let feed_contents = get_feed_contents().unwrap();
     let feed = parse(feed_contents.as_bytes()).unwrap();
-    let doms = feed.entries.iter().filter_map(extract_dom);
-    for dom in doms {
-        for p in dom.children {
-            let Some(element) = p.element() else {
-                continue;
-            };
-            if element.name != "p" {
-                continue;
-            };
-            // NOTE: p is a Node, which is an enum of Element, Text, or Comment;
-            // can't have Some(text) here since we already established that we
-            // are dealing with an Element. Instead, there will be a Text instance
-            // among the children which is what we'll actually work with
-            let Some(text) = p.text() else { continue };
-            println!("{}", text);
-        }
+    let documents = feed.entries.iter().filter_map(extract_document);
+
+    for document in documents {
+        if let Some(blog_url) = extract_blog_url(document) {
+            dbg!(blog_url);
+        };
     }
 }
 
@@ -44,9 +34,29 @@ fn get_feed_contents() -> Result<String, ReqwestError> {
     Ok(body)
 }
 
-fn extract_dom(feed_entry: &Entry) -> Option<Dom> {
+fn extract_document(feed_entry: &Entry) -> Option<Html> {
     feed_entry
         .summary_detail
         .as_ref()
-        .and_then(|d| Dom::parse(&d.value).ok())
+        .and_then(|d| Some(Html::parse_fragment(&d.value)))
+}
+
+fn extract_blog_url(document: Html) -> Option<String> {
+    let p_selector = Selector::parse("p").unwrap();
+    let p = document.select(&p_selector).next()?;
+    if !p.inner_html().contains("whose blog can be found at") {
+        return None;
+    };
+    let a_selector = Selector::parse("a").unwrap();
+    let a = p.select(&a_selector).next()?;
+    let raw_url = a.value().attr("href")?;
+    Some(canonicalize(&raw_url))
+}
+
+fn canonicalize(url: &str) -> String {
+    let url = url.replace("www.", "");
+    let url = url.strip_prefix("http://").unwrap_or(&url);
+    let url = url.strip_prefix("https://").unwrap_or(&url);
+    let url = url.strip_suffix("/").unwrap_or(&url);
+    url.to_string()
 }
