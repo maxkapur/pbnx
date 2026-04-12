@@ -58,5 +58,13 @@ fn extract_blog_url(document: &Html) -> Option<String> {
 }
 
 fn extract_domain(raw_url: &str) -> Option<String> {
-    Some(Url::parse(raw_url).ok()?.domain()?.to_string())
+    Some(
+        Url::parse(raw_url)
+            .ok()?
+            .domain()?
+            .to_string()
+            // Clean up
+            .replace("www.", "")
+            .to_lowercase(),
+    )
 }
