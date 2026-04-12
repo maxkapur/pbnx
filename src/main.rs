@@ -7,6 +7,8 @@ use std::{
     fs::{read_to_string, write},
 };
 
+use ndarray::*;
+
 const FEED_URL: &str = "https://manuelmoreale.com/feed/peopleandblogs";
 
 fn main() {
@@ -39,7 +41,29 @@ fn main() {
         })
         .collect();
 
-    dbg!(xrefs);
+    let idx2url: Vec<String> = xrefs.keys().cloned().collect();
+    let url2idx: HashMap<String, usize> = idx2url
+        .iter()
+        .enumerate()
+        .map(|(i, url)| (url.clone(), i))
+        .collect();
+
+    let n = xrefs.len();
+    let mut array: Array2<f64> = Array2::zeros((n, n));
+
+    xrefs.iter().for_each(|(src_url, dest_urls)| {
+        let &j = url2idx.get(src_url).unwrap();
+
+        dest_urls.iter().for_each(|dest_url| {
+            let &i = url2idx.get(dest_url).unwrap();
+            array[[i, j]] = 1.0;
+        })
+    });
+
+    let sum = array.sum_axis(Axis(0));
+
+    dbg!(array);
+    dbg!(sum);
 }
 
 fn get_feed_cache_path() -> std::path::PathBuf {
@@ -62,7 +86,7 @@ fn extract_document(feed_entry: &Entry) -> Option<Html> {
     feed_entry
         .summary_detail
         .as_ref()
-        .and_then(|d| Some(Html::parse_fragment(&d.value)))
+        .map(|d| Html::parse_fragment(&d.value))
 }
 
 fn extract_blog_url(document: &Html) -> Option<String> {
