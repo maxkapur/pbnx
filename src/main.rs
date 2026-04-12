@@ -3,7 +3,7 @@ use platform_dirs::AppDirs;
 use reqwest::{self, Error as ReqwestError, Url};
 use scraper::{Html, Selector};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs::{read_to_string, write},
 };
 
@@ -19,7 +19,27 @@ fn main() {
         .filter_map(|document| extract_blog_url(&document).map(|url| (url, document)))
         .collect();
 
-    dbg!(documents);
+    // Track which interviews reference other interviews
+    let xrefs: HashMap<String, Vec<String>> = documents
+        .iter()
+        .map(|(my_url, document)| {
+            let a_selector = Selector::parse("a").unwrap();
+            // Use a HashSet to capture only unique references
+            let refs: HashSet<String> = document
+                .select(&a_selector)
+                .filter_map(|a| {
+                    let ref_url = a.value().attr("href").map(extract_domain)??;
+                    if documents.contains_key(&ref_url) && &ref_url != my_url {
+                        return Some(ref_url);
+                    }
+                    None
+                })
+                .collect();
+            (my_url.clone(), refs.into_iter().collect())
+        })
+        .collect();
+
+    dbg!(xrefs);
 }
 
 fn get_feed_cache_path() -> std::path::PathBuf {
