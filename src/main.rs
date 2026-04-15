@@ -1,10 +1,12 @@
 use feedparser_rs::{Entry, parse};
+use ndarray_linalg::Eig;
 use platform_dirs::AppDirs;
 use reqwest::{self, Error as ReqwestError, Url};
 use scraper::{Html, Selector};
 use std::{
     collections::{HashMap, HashSet},
     fs::{read_to_string, write},
+    ops::Div,
 };
 
 use ndarray::*;
@@ -83,6 +85,23 @@ fn main() {
 
     let col_sum = markov_array.sum_axis(Axis(0));
     assert!(col_sum.iter().all(|&x| (x - 1.0).abs() < 1e-8));
+
+    let (eig, vecs) = markov_array.eig().unwrap();
+
+    // index of eigenvalue closest to Complex(1, 0)
+    let idx = eig
+        .iter()
+        .enumerate()
+        .max_by(|(_, x), (_, y)| {
+            let dx = (x.re - 1.0).hypot(x.im);
+            let dy = (y.re - 1.0).hypot(y.im);
+            dx.partial_cmp(&dy).unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(i, _)| i)
+        .unwrap();
+
+    let stationary_dist = vecs.column(idx).div(vecs.column(idx).sum());
+    dbg!(stationary_dist);
 }
 
 fn get_feed_cache_path() -> std::path::PathBuf {
