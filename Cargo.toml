@@ -6,7 +6,8 @@ edition = "2024"
 [dependencies]
 feedparser-rs = "0.5.2"
 ndarray = "0.17.2"
-ndarray-linalg = "0.18.1"
+ndarray-linalg = { version = "0.18.1", features = ["openblas-static"] }
+openblas-src = "0.10.15"
 platform-dirs = "0.3.0"
 reqwest = { version = "0.13", features = ["blocking"] }
 scraper = "0.26.0"
