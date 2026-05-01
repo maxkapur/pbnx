@@ -1,12 +1,12 @@
 use feedparser_rs::{Entry, parse};
-use ndarray_linalg::{Eig, Scalar};
+use ndarray_linalg::Eig;
 use platform_dirs::AppDirs;
 use reqwest::{self, Error as ReqwestError, Url};
 use scraper::{Html, Selector};
 use std::{
     collections::{HashMap, HashSet},
     fs::{self, create_dir_all, read_to_string, write},
-    ops::{Div, DivAssign, Mul},
+    ops::DivAssign,
 };
 
 use ndarray::*;
@@ -125,7 +125,7 @@ fn main() {
         .map(|(i, &x)| (idx2url[i].clone(), x))
         .collect();
     with_keys
-        .sort_unstable_by(|(_, x), (_, y)| y.partial_cmp(&x).unwrap_or(std::cmp::Ordering::Equal));
+        .sort_unstable_by(|(_, x), (_, y)| y.partial_cmp(x).unwrap_or(std::cmp::Ordering::Equal));
 
     println!("rank,url,probability");
     with_keys
