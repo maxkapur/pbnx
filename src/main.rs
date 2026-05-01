@@ -45,7 +45,11 @@ fn main() {
         })
         .collect();
 
-    let idx2url: Vec<String> = xrefs.keys().cloned().collect();
+    // Canonically order URLs alphabetically
+    let mut idx2url: Vec<String> = xrefs.keys().cloned().collect();
+    idx2url.sort();
+    let idx2url = idx2url;
+
     let url2idx: HashMap<String, usize> = idx2url
         .iter()
         .enumerate()
