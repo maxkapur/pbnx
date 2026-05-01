@@ -101,8 +101,22 @@ fn main() {
         .map(|(i, _)| i)
         .unwrap();
 
+    // extract the stationary distribution
     let stationary_dist = vecs.column(idx).div(vecs.column(idx).sum());
-    dbg!(stationary_dist);
+    // assert!(stationary_dist.iter().all(|c| c.im < 1e-8));
+    // assert!(stationary_dist.iter().all(|c| 0.0 <= c.re && c.re <= 1.0));
+
+    let stationary_dist = stationary_dist.map(|c| c.re);
+
+    let mut with_keys: Vec<(String, f64)> = stationary_dist
+        .iter()
+        .enumerate()
+        .map(|(i, &x)| (idx2url[i].clone(), x))
+        .collect();
+    with_keys
+        .sort_unstable_by(|(_, x), (_, y)| x.partial_cmp(&y).unwrap_or(std::cmp::Ordering::Equal));
+
+    dbg!(with_keys);
 }
 
 fn get_feed_cache_path() -> std::path::PathBuf {
