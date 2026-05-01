@@ -5,7 +5,7 @@ use reqwest::{self, Error as ReqwestError, Url};
 use scraper::{Html, Selector};
 use std::{
     collections::{HashMap, HashSet},
-    fs::{create_dir_all, read_to_string, write},
+    fs::{self, create_dir_all, read_to_string, write},
     ops::Div,
 };
 
@@ -13,6 +13,7 @@ use ndarray::*;
 
 const FEED_URL: &str = "https://manuelmoreale.com/feed/peopleandblogs";
 const DAMPING_FACTOR: f64 = 0.15;
+const CACHE_LIFETIME_SEC: u64 = 3600 * 24 * 7;
 
 fn main() {
     let feed_contents = get_feed_contents().unwrap();
@@ -111,10 +112,24 @@ fn get_feed_cache_path() -> std::path::PathBuf {
         .join("config-file")
 }
 
+fn is_fresh(feed_cache_path: &std::path::Path) -> bool {
+    let fresh = || -> Option<bool> {
+        let elapsed = fs::metadata(feed_cache_path)
+            .ok()?
+            .modified()
+            .ok()?
+            .elapsed()
+            .ok()?;
+        Some(elapsed.as_secs() <= CACHE_LIFETIME_SEC)
+    };
+    fresh().unwrap_or(false)
+}
+
 fn get_feed_contents() -> Result<String, ReqwestError> {
     let feed_cache_path = get_feed_cache_path();
-
-    if let Ok(feed_data) = read_to_string(feed_cache_path.clone()) {
+    if is_fresh(feed_cache_path.as_path())
+        && let Ok(feed_data) = read_to_string(feed_cache_path.clone())
+    {
         return Ok(feed_data);
     }
     let body = reqwest::blocking::get(FEED_URL)?.text()?;
