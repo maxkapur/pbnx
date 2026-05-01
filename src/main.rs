@@ -16,54 +16,10 @@ const DAMPING_FACTOR: f64 = 0.15;
 const CACHE_LIFETIME_SEC: u64 = 3600 * 24 * 7;
 
 fn main() {
-    let feed_contents = get_feed_contents().unwrap();
-    let feed = parse(feed_contents.as_bytes()).unwrap();
-    let documents: HashMap<String, Html> = feed
-        .entries
-        .iter()
-        .filter_map(extract_document)
-        .filter_map(|document| extract_blog_url(&document).map(|url| (url, document)))
-        .collect();
-
-    // Track which interviews reference other interviews
-    let xrefs: HashMap<String, Vec<String>> = documents
-        .iter()
-        .map(|(my_url, document)| {
-            let a_selector = Selector::parse("a").unwrap();
-            // Use a HashSet to capture only unique references
-            let refs: HashSet<String> = document
-                .select(&a_selector)
-                .filter_map(|a| {
-                    let ref_url = a.value().attr("href").map(extract_domain)??;
-                    if documents.contains_key(&ref_url) && &ref_url != my_url {
-                        return Some(ref_url);
-                    }
-                    None
-                })
-                .collect();
-            (my_url.clone(), refs.into_iter().collect())
-        })
-        .collect();
-
-    let idx2url: Vec<String> = xrefs.keys().cloned().collect();
-    let url2idx: HashMap<String, usize> = idx2url
-        .iter()
-        .enumerate()
-        .map(|(i, url)| (url.clone(), i))
-        .collect();
+    let xrefs = collect_xrefs();
+    let (xrefs_idx, idx2url) = indexify(&xrefs);
 
     let n = xrefs.len();
-
-    let xrefs_idx: Vec<HashSet<usize>> = idx2url
-        .iter()
-        .map(|src_url| {
-            xrefs[&src_url.clone()]
-                .iter()
-                .map(|dest_url| url2idx[dest_url])
-                .collect()
-        })
-        .collect();
-
     let d = DAMPING_FACTOR / (n as f64);
     let nlinks: Vec<usize> = xrefs_idx.iter().map(|s| s.len()).collect();
     let c: Vec<f64> = nlinks
@@ -192,4 +148,58 @@ fn extract_domain(raw_url: &str) -> Option<String> {
             .replace("www.", "")
             .to_lowercase(),
     )
+}
+
+/// Parse the feed and collect all cross references between interviews.
+fn collect_xrefs() -> HashMap<String, Vec<String>> {
+    let feed_contents = get_feed_contents().unwrap();
+    let feed = parse(feed_contents.as_bytes()).unwrap();
+    let documents: HashMap<String, Html> = feed
+        .entries
+        .iter()
+        .filter_map(extract_document)
+        .filter_map(|document| extract_blog_url(&document).map(|url| (url, document)))
+        .collect();
+
+    documents
+        .iter()
+        .map(|(my_url, document)| {
+            let a_selector = Selector::parse("a").unwrap();
+            // Use a HashSet to capture only unique references
+            let xrefs: HashSet<String> = document
+                .select(&a_selector)
+                .filter_map(|a| {
+                    let ref_url = a.value().attr("href").map(extract_domain)??;
+                    if documents.contains_key(&ref_url) && &ref_url != my_url {
+                        return Some(ref_url);
+                    }
+                    None
+                })
+                .collect();
+            (my_url.clone(), xrefs.into_iter().collect())
+        })
+        .collect()
+}
+
+/// Transform `String -> Vec<String>` mapping into a `usize -> HashSet<usize>` mapping
+/// to ease array operations. Also provide a Vec<String> to associate each URL with its
+/// numerical index.
+fn indexify(xrefs: &HashMap<String, Vec<String>>) -> (Vec<HashSet<usize>>, Vec<String>) {
+    let idx2url: Vec<String> = xrefs.keys().cloned().collect();
+    let url2idx: HashMap<String, usize> = idx2url
+        .iter()
+        .enumerate()
+        .map(|(i, url)| (url.clone(), i))
+        .collect();
+
+    let xrefs_idx: Vec<HashSet<usize>> = idx2url
+        .iter()
+        .map(|src_url| {
+            xrefs[&src_url.clone()]
+                .iter()
+                .map(|dest_url| url2idx[dest_url])
+                .collect()
+        })
+        .collect();
+    (xrefs_idx, idx2url)
 }
