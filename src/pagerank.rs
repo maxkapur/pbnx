@@ -51,6 +51,9 @@ fn indexify(xrefs: &HashMap<String, Vec<String>>) -> (Vec<HashSet<usize>>, Vec<S
     (xrefs_idx, idx2url)
 }
 
+/// Construct a Markov array where the `(j, i)` entry gives the probability of
+/// traveling from page `i` to `j`. The `damping_factor` determines the
+/// probability of a random jump across the graph.
 fn construct_markov_array(
     xrefs_idx: Vec<HashSet<usize>>,
     damping_factor: f64,
@@ -81,6 +84,7 @@ fn construct_markov_array(
     markov_array
 }
 
+/// Compute the stationary distribution of the Markov matrix.
 fn compute_stationary_distribution(
     markov_array: ArrayBase<OwnedRepr<f64>, Dim<[usize; 2]>, f64>,
 ) -> ArrayBase<OwnedRepr<f64>, Dim<[usize; 1]>, f64> {

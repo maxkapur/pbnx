@@ -3,8 +3,10 @@ mod feed;
 mod pagerank;
 
 fn main() {
-    let xrefs = feed::collect_xrefs();
+    let xrefs = feed::people_and_blogs_xrefs();
     let pageranks = pagerank::pagerank(xrefs);
+
+    // Format PageRank results as a CSV
     println!("rank,url,probability");
     pageranks
         .iter()
