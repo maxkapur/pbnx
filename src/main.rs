@@ -1,12 +1,12 @@
 use feedparser_rs::{Entry, parse};
-use ndarray_linalg::Eig;
+use ndarray_linalg::{Eig, Scalar};
 use platform_dirs::AppDirs;
 use reqwest::{self, Error as ReqwestError, Url};
 use scraper::{Html, Selector};
 use std::{
     collections::{HashMap, HashSet},
     fs::{self, create_dir_all, read_to_string, write},
-    ops::Div,
+    ops::{Div, DivAssign, Mul},
 };
 
 use ndarray::*;
@@ -106,11 +106,19 @@ fn main() {
     assert!((should_be_one.re - 1.0).hypot(should_be_one.im) < 1e-8);
 
     // extract the stationary distribution
-    let stationary_dist = vecs.column(idx).div(vecs.column(idx).sum());
-    // assert!(stationary_dist.iter().all(|c| c.im < 1e-8));
-    // assert!(stationary_dist.iter().all(|c| 0.0 <= c.re && c.re <= 1.0));
+    let stationary_dist = {
+        let complex_dist = vecs.column(idx);
 
-    let stationary_dist = stationary_dist.map(|c| c.re);
+        assert!(complex_dist.iter().all(|c| c.im < 1e-8));
+
+        let mut real_dist = complex_dist.map(|c| c.re);
+        real_dist.div_assign(real_dist.sum());
+        assert!(real_dist.iter().all(|&c| 0.0 < c && c <= 1.0));
+
+        let should_be_zeros = markov_array.dot(&real_dist) - &real_dist;
+        assert!(should_be_zeros.iter().all(|x| x.abs() < 1e-8));
+        real_dist
+    };
 
     let mut with_keys: Vec<(String, f64)> = stationary_dist
         .iter()
