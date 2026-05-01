@@ -10,7 +10,7 @@ use std::{
 use crate::constants::{CACHE_LIFETIME_SEC, FEED_URL};
 
 /// Parse the P&B feed and collect all cross references between interviews.
-pub fn people_and_blogs_xrefs() -> HashMap<String, Vec<String>> {
+pub fn people_and_blogs_xrefs() -> HashMap<String, HashSet<String>> {
     let feed_contents = get_feed_contents().unwrap();
     let feed = parse(feed_contents.as_bytes()).unwrap();
     let documents: HashMap<String, Html> = feed
@@ -36,7 +36,7 @@ pub fn people_and_blogs_xrefs() -> HashMap<String, Vec<String>> {
                     None
                 })
                 .collect();
-            (my_url.clone(), xrefs.into_iter().collect())
+            (my_url.clone(), xrefs)
         })
         .collect()
 }

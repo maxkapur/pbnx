@@ -9,7 +9,7 @@ use crate::constants::DAMPING_FACTOR;
 use ndarray::*;
 
 /// Run the PageRank algorithm on the given map of cross references.
-pub fn pagerank(xrefs: HashMap<String, Vec<String>>) -> Vec<(usize, String, f64)> {
+pub fn pagerank(xrefs: HashMap<String, HashSet<String>>) -> Vec<(usize, String, f64)> {
     let (xrefs_idx, idx2url) = indexify(&xrefs);
     let markov_array = construct_markov_array(xrefs_idx, DAMPING_FACTOR);
     let stationary_dist = compute_stationary_distribution(markov_array);
@@ -31,7 +31,7 @@ pub fn pagerank(xrefs: HashMap<String, Vec<String>>) -> Vec<(usize, String, f64)
 /// Transform `String -> Vec<String>` mapping into a `usize -> HashSet<usize>` mapping
 /// to ease array operations. Also provide a Vec<String> to associate each URL with its
 /// numerical index.
-fn indexify(xrefs: &HashMap<String, Vec<String>>) -> (Vec<HashSet<usize>>, Vec<String>) {
+fn indexify(xrefs: &HashMap<String, HashSet<String>>) -> (Vec<HashSet<usize>>, Vec<String>) {
     let idx2url: Vec<String> = xrefs.keys().cloned().collect();
     let url2idx: HashMap<String, usize> = idx2url
         .iter()
