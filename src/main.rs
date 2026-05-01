@@ -5,7 +5,7 @@ use reqwest::{self, Error as ReqwestError, Url};
 use scraper::{Html, Selector};
 use std::{
     collections::{HashMap, HashSet},
-    fs::{read_to_string, write},
+    fs::{create_dir_all, read_to_string, write},
     ops::Div,
 };
 
@@ -105,8 +105,10 @@ fn main() {
 }
 
 fn get_feed_cache_path() -> std::path::PathBuf {
-    let app_dirs = AppDirs::new(Some("pnbx"), true).unwrap();
-    app_dirs.config_dir.join("config-file")
+    AppDirs::new(Some("pnbx"), true)
+        .unwrap()
+        .config_dir
+        .join("config-file")
 }
 
 fn get_feed_contents() -> Result<String, ReqwestError> {
@@ -115,7 +117,8 @@ fn get_feed_contents() -> Result<String, ReqwestError> {
     if let Ok(feed_data) = read_to_string(feed_cache_path.clone()) {
         return Ok(feed_data);
     }
-    let body = reqwest::blocking::get(FEED_URL).unwrap().text().unwrap();
+    let body = reqwest::blocking::get(FEED_URL)?.text()?;
+    create_dir_all(feed_cache_path.parent().unwrap()).unwrap();
     write(feed_cache_path, body.clone()).unwrap();
     Ok(body)
 }
