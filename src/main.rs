@@ -94,16 +94,16 @@ fn main() {
     let (eig, vecs) = markov_array.eig().unwrap();
 
     // index of eigenvalue closest to Complex(1, 0)
-    let idx = eig
+    let (idx, should_be_one) = eig
         .iter()
         .enumerate()
-        .max_by(|(_, x), (_, y)| {
+        .min_by(|(_, x), (_, y)| {
             let dx = (x.re - 1.0).hypot(x.im);
             let dy = (y.re - 1.0).hypot(y.im);
             dx.partial_cmp(&dy).unwrap_or(std::cmp::Ordering::Equal)
         })
-        .map(|(i, _)| i)
         .unwrap();
+    assert!((should_be_one.re - 1.0).hypot(should_be_one.im) < 1e-8);
 
     // extract the stationary distribution
     let stationary_dist = vecs.column(idx).div(vecs.column(idx).sum());
