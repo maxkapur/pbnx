@@ -108,7 +108,6 @@ fn main() {
     // extract the stationary distribution
     let stationary_dist = {
         let complex_dist = vecs.column(idx);
-
         assert!(complex_dist.iter().all(|c| c.im < 1e-8));
 
         let mut real_dist = complex_dist.map(|c| c.re);
@@ -126,9 +125,13 @@ fn main() {
         .map(|(i, &x)| (idx2url[i].clone(), x))
         .collect();
     with_keys
-        .sort_unstable_by(|(_, x), (_, y)| x.partial_cmp(&y).unwrap_or(std::cmp::Ordering::Equal));
+        .sort_unstable_by(|(_, x), (_, y)| y.partial_cmp(&x).unwrap_or(std::cmp::Ordering::Equal));
 
-    dbg!(with_keys);
+    println!("rank,url,probability");
+    with_keys
+        .iter()
+        .enumerate()
+        .for_each(|(rank, (url, probability))| println!("{},{},{}", rank, url, probability));
 }
 
 fn get_feed_cache_path() -> std::path::PathBuf {
