@@ -28,9 +28,9 @@ pub fn pagerank(xrefs: HashMap<String, HashSet<String>>) -> Vec<(usize, String, 
     pageranks
 }
 
-/// Transform `String -> Vec<String>` mapping into a `usize -> HashSet<usize>` mapping
-/// to ease array operations. Also provide a Vec<String> to associate each URL with its
-/// numerical index.
+/// Transform "string to strings" mapping into a "usize to usizes" mapping to
+/// ease array operations. Also provide a Vec<String> to associate each URL with
+/// its numerical index.
 fn indexify(xrefs: &HashMap<String, HashSet<String>>) -> (Vec<HashSet<usize>>, Vec<String>) {
     let idx2url: Vec<String> = xrefs.keys().cloned().collect();
     let url2idx: HashMap<String, usize> = idx2url
